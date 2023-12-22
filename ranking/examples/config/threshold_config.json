@@ -1,0 +1,28 @@
+{
+    "input":[
+                {
+                    "file":"./data/rank1.csv", 
+                    "separator":";", 
+                    "col_id":"id", 
+                    "col_score":"score"
+                },
+                {
+                    "file":"./data/rank2.csv"
+                },
+                {
+                    "file":"./data/rank3.csv", 
+                    "separator":";", 
+                    "col_id":"id", 
+                    "col_score":"score"
+                },
+                {
+                    "file":"./data/rank4.csv", 
+                    "separator":";"
+                }
+        ],
+    "settings":{ 
+                "k":5,
+                "algorithm":"threshold",
+                "weights":[0.3,0.5,0.7,0.9]
+    }
+}

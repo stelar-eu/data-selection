@@ -1,0 +1,25 @@
+{
+    "input":[
+                {
+                    "file":"path to CSV file containing 1st ranked list", 
+                    "separator":"separator character between columns in the CSV file, default ;", 
+                    "col_id":"column name holding identifiers, e.g., id", 
+                    "col_score":"column name holding scores, e.g., score"
+                },
+                {
+                    "file":"path to CSV file containing 2nd ranked list", 
+                    "separator":"separator character between columns in the CSV file, default ;", 
+                    "col_id":"column name holding identifiers, e.g., id", 
+                    "col_score":"column name holding scores, e.g., score"
+
+                },
+                {
+                    "file":"Include as many items as the input ranked lists (at least two)"
+                }
+        ],
+    "settings":{ 
+                "k":"integer specifying the number of items to be retrieved having the top aggregated scores",
+                "algorithm":"the algorithm to be applied:, e.g., Bordacount, threshold, "CE",
+                "weights":["array of real values in [0..1] specifying the weight (if applicable) per input ranked list, e.g., [0.3,0.5,...]"]
+    }
+}

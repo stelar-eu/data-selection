@@ -1,0 +1,14 @@
+{
+    "input":[
+                {
+                    "file": "./data/ice.csv", 
+                    "separator": ";", 
+                    "col_id": "id", 
+                    "col_scores": ["impact","confidence","ease"]
+                }
+        ],
+    "settings":{ 
+                "k":5,
+                "algorithm":"ice"
+    }
+}

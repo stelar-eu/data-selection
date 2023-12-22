@@ -1,0 +1,14 @@
+{
+    "input":[
+                {
+                    "file":"./data/rank_all.csv", 
+                    "separator":";", 
+                    "col_id":"id", 
+                    "col_scores": ["score1","score2","score3"]
+                }
+        ],
+    "settings":{ 
+                "k":5,
+                "algorithm":"Bordacount"
+    }
+}

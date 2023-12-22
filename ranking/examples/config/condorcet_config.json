@@ -1,0 +1,27 @@
+{
+    "input":[
+                {
+                    "file":"./data/rank1.csv", 
+                    "separator":";", 
+                    "col_id":"id", 
+                    "col_score":"score"
+                },
+                {
+                    "file":"./data/rank2.csv"
+                },
+                {
+                    "file":"./data/rank3.csv", 
+                    "separator":";", 
+                    "col_id":"id", 
+                    "col_score":"score"
+                },
+                {
+                    "file":"./data/rank4.csv", 
+                    "separator":";"
+                }
+        ],
+    "settings":{ 
+                "k":5,
+                "algorithm":"Condorcet"
+    }
+}
