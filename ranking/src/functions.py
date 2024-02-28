@@ -37,6 +37,29 @@ def read_list_csv(file, separator=';', col_id='id', col_score='score'):
     return df
 
 
+def read_list_json(json_arr, col_id='id', col_score='score'):
+    """Reads ranked items (with an id and a numerical score) from a JSON array.
+
+    Args:
+        json_arr (array): An array with key(id), value(score) pairs.
+        col_id (string): Key containing the unique identifier of each item in the dictionary (default: `id`).      
+        col_score (string): Key containing the score of each item (default: `score`).      
+                
+    Returns:
+        A DataFrame with the given items ordered by descending score.
+    """
+    
+    df = pd.DataFrame(json_arr)
+    # Use the unique identifiers as index in each data frame for fast access
+    df = df.set_index(col_id)
+    # Represent scores as numerical values
+    df = df[pd.to_numeric(df[col_score], errors='coerce').notnull()]
+    # Sort by descending score
+    df = df.sort_values(by=[col_score], ascending=False)
+    
+    return df
+
+
 def read_multi_lists_csv(file, col_scores, separator=';', col_id='id'):
     """Reads ranked items (with an id and a numerical score) from a CSV file.
 
@@ -90,8 +113,14 @@ def merge_input_lists(input_lists):
     Returns:
         A DataFrame with all unordered items and their respective scores for the specified features (columns).
     """
-    
-    df_merged = reduce(lambda left,right: pd.merge(left, right, left_index=True, right_index=True, suffixes=('', '__2'), how='outer'), input_lists)
+
+    # Add suffixes to column 'score' in each input list (data frame)
+    new_list = []
+    for idx, df in enumerate(input_lists):
+        df = df.add_suffix('_'+str(idx))
+        new_list.append(df)
+                                   
+    df_merged = reduce(lambda left,right: pd.merge(left, right, left_index=True, right_index=True, how='outer'), new_list)
     
     return df_merged
 
@@ -121,6 +150,32 @@ def construct_input_lists(config):
         df_merged = merge_input_lists(input_lists)
 
     return df_merged, input_lists
+
+
+def split_partial_results_to_lists(partial_results, col_id='id'):
+    """Splits the given list of partial ranked results into multiple dataframes, each having two columns: the identifier and one of the original columns (carrying scores per facet).
+    
+    Args:
+        partial_results (list): JSON array of partial results: each item holds an "id" (unique identifiers) and a dictionary with partial scores per facet.    
+        col_id (string): Name of the column containing the unique identifier of each item in the list (default: `id`).          
+    Returns:
+        A collection of DataFrames, each containing a ranked list (with item identifiers and their respective partial scores).
+    """
+    
+    input_lists = []
+
+    # Create a DataFrame from the input JSON
+    df = pd.json_normalize(partial_results, sep='.')
+    # Use the mandatory "id" column as index
+    df = df.set_index(col_id)
+    # Keep the original names per facet by removing the 'partial_scores.' prefix resulting from JSON normalization
+    df.columns = list(map(lambda c: c.split("partial_scores.",1)[1], df.columns))
+    # For each column, a separate list will be created (assuming common identifiers)
+    for col in list(df.columns):
+        ranked_list = df[[col]]
+        input_lists.append(ranked_list)
+    
+    return input_lists
 
 
 # ICE (Impact - Confidence - Ease)
@@ -270,8 +325,12 @@ def topk_threshold(rankings, weights, k):
         # Iterate over items in the current i-th position
         for j in range(len(rankings)):
             # Get item from the j-th list at the i-th iteration
-            val = rankings[j].iloc[i]  
-            key = val.name
+            if len(rankings[j]) > i:
+                val = rankings[j].iloc[i]  
+                key = val.name
+            else:  # skip a ranked list if it contains fewer elements
+                scores4threshold.append(0.0)
+                continue
 
             # Keep this partial score for adjusting the threshold
             scores4threshold.append(val['score'])
@@ -378,20 +437,28 @@ def combined_ranking(rankings, settings):
         A DataFrame with the top-k ranked elements having the greatest aggregated scores according to the applied method.
     """
 
-    # TODO: Distinguish methods requiring a DataFrame (with a column per input ranking) from those that work on separate ranked lists
-    
+    # Accommodate methods requiring a DataFrame (with a column per input ranking) and also those that work on separate ranked lists
+    if isinstance(rankings, pd.DataFrame):   # input is a DataFrame
+        df_rankings = rankings   
+    else:   # construct a merged DataFrame from input lists
+        df_rankings = merge_input_lists(rankings)   
+
     if settings['algorithm'] == 'threshold':
         # INPUT: collection of ranked lists
-        result, cnt, threshold = topk_threshold(rankings, settings['weights'], settings['k'])
+        if 'weights' in settings:
+            weights = settings['weights']
+        else:  # If weights are not user-specified, assume equal weight (1.0) for each input list
+            weights = [1.0] * len(rankings)
+        result, cnt, threshold = topk_threshold(rankings, weights, settings['k'])
     elif settings['algorithm'] == 'ice':
         # INPUT: data frame
-        result = ICEscore(rankings)
+        result = ICEscore(df_rankings)
     elif settings['algorithm'] == 'paretoset':
         # INPUT: data frame
-        result = Skyline(rankings, settings['sense'])
+        result = Skyline(df_rankings, settings['sense'])
     elif settings['algorithm'] == 'weighted_paretoset':
         # INPUT: data frame
-        result = weightedScoreSkyline(rankings, settings['sense'], settings['weights'], settings['k'])
+        result = weightedScoreSkyline(df_rankings, settings['sense'], settings['weights'], settings['k'])
     elif settings['algorithm'].lower() in ['combmin','combmax','combmed','combsum','combanz','combmnz']:  # methods from ranx
         # INPUT: collection of ranked lists
         result = rank_aggregation_by_ranx(rankings, settings['algorithm'][4:].lower(), settings['k']) 
@@ -400,7 +467,7 @@ def combined_ranking(rankings, settings):
         result = rank_aggregation_by_ranx(rankings, settings['algorithm'].lower(), settings['k'])
     elif settings['algorithm'].lower() in ['bordacount','mra']:  # methods from ranky
         # INPUT: data frame
-        result = rank_aggregation_by_ranky(rankings, settings['algorithm'].lower(), settings['k'])
+        result = rank_aggregation_by_ranky(df_rankings, settings['algorithm'].lower(), settings['k'])
         
     return result
 
