@@ -85,6 +85,7 @@ def search_bar():
                 vals = [v.strftime('%Y-%m-%d') for v in vals]
         total[col] = vals
         
+    print(total)
     options = [f'{k}: {v}' for k, v in total.items()]
     options = st.multiselect(label=' ', options=options, default=options)
     options = set([o.split(':')[0] for o in options])

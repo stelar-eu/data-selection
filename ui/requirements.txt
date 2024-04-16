@@ -3,7 +3,7 @@ streamlit==1.30.0
 streamlit_tags==1.2.8
 matplotlib==3.6.2
 plotly==5.20.0
-streamlit-modal=0.1.2
+streamlit-modal==0.1.2
 ranx==0.3.19
 ranky==0.3.4
 paretoset==1.2.0

@@ -235,7 +235,7 @@ def facet_list():
             facet_tabs[no].plotly_chart(fig)
             min_k, max_k = min(c.keys()), max(c.keys())
             
-            last_val = last_val if type(last_val)!=list else '{last_val[0]} - {last_val[1]}'
+            last_val = last_val if type(last_val)!=list else f'{last_val[0]} - {last_val[1]}'
             
             
             # if facet_type == 'RangeNumeric':

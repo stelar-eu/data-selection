@@ -19,4 +19,4 @@ cd src/streamlit
 streamlit run app.py --server.port 8501
 ```
 
-And visit this [link](http://eodp.magellan2.imsi.athenarc.gr/)
+And visit `localhost:8501`

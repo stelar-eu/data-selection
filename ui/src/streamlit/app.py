@@ -49,6 +49,7 @@ with tab_results:
         json_response = st.session_state.cat_response.json()
         if json_response['success']:
             if button:
+                st.session_state.compared_ids = set()
                 st.session_state.results_df = modify_df(json_response['result']['results'])
                 st.rerun()
             
