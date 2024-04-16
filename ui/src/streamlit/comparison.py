@@ -80,10 +80,10 @@ def compare_df(df):
                 centroid = geo_series.centroid
                 lon = centroid.x
                 lat = centroid.y
-                m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', min_zoom=1, max_bounds=True, zoom_start=1)
+                m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', min_zoom=1, max_bounds=True, zoom_start=5)
                 geo_json = folium.GeoJson(data=geom, style_function=lambda x: {"fillColor": "orange"})
                 geo_json.add_to(m)
-                m.fit_bounds(geo_json.get_bounds())
+                # m.fit_bounds(geo_json.get_bounds())
 
                 st.session_state.maps[df.index[pos - 1]] = m
                 polygon_dict[df.index[pos - 1]] = geom

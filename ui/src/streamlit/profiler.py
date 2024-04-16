@@ -539,7 +539,7 @@ def profiler_raster(config_dict: dict) -> None:
                     centroid = mbr_box.centroid
                     lon = centroid.x
                     lat = centroid.y
-                    m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', min_zoom=3, max_bounds=True, zoom_start=3)
+                    m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', min_zoom=3, max_bounds=True, zoom_start=5)
                     gjson.add_to(m)
                     with cols[1]:
                         m.fit_bounds(gjson.get_bounds())

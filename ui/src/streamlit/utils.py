@@ -199,20 +199,25 @@ def dates_line_plot(title: str, df: pd.DataFrame, date_column='Date'):
 
 def all_in_map(title: str, shapes: dict, titles: dict, colors: dict):
     st.subheader(title)
+    # data = dict(dataset=titles.values(), color=colors.values, geometry=shapes.values())
+    # gdf = gpd.GeoDataFrame(data, crs="EPSG:4326")
+
     gdf = gpd.GeoDataFrame({}, geometry=list(shapes.values()).copy(), crs="EPSG:4326")
     centroid = gdf.dissolve().centroid
-    minx, miny, maxx, maxy = gdf.total_bounds
-    bb = box(minx, miny, maxx, maxy)
+    # minx, miny, maxx, maxy = gdf.total_bounds
+    # bb = box(minx, miny, maxx, maxy)
     lon = centroid.x
     lat = centroid.y
-    m_all = folium.Map(location=[lat, lon], tiles='OpenStreetMap', max_bounds=True, min_zoom=1, zoom_start=1)
+    m_all = folium.Map(location=[lat, lon], tiles='OpenStreetMap', max_bounds=True, min_zoom=1, zoom_start=5)
+
     for index, polygon in shapes.items():
-        geo_json = folium.GeoJson(data=polygon, name=titles[index],
-                                  tooltip='Dataset: ' + titles[index], color=colors[titles[index]])
-        geo_json.add_to(m_all)
+        color = colors[titles[index]]
+        feat = folium.GeoJson(data=polygon, name=titles[index],
+                              tooltip='Dataset: ' + titles[index], color=colors[titles[index]])
+        feat.add_to(m_all)
 
     folium.LayerControl().add_to(m_all)
-    m_all.fit_bounds(([bb.bounds[1], bb.bounds[0]], [bb.bounds[3], bb.bounds[2]]))
+    # m_all.fit_bounds(([bb.bounds[1], bb.bounds[0]], [bb.bounds[3], bb.bounds[2]]))
     st.session_state.maps['all'] = m_all
     st_folium(st.session_state.maps['all'],
               key=str(datetime.now()) + 'all',
