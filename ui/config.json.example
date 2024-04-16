@@ -1,0 +1,26 @@
+{
+	"connect":
+	{
+		"KLMS_API": "XXXXXXXXX",
+		"CKAN_URL": "XXXXXXXXX",
+		"API_KEY": "XXXXXXXXXXXXXXXXXX"
+	},
+	"commands":
+	{
+		"search": "dataset/search",
+		"rank": "catalog/rank",
+		"values": "catalog/facet/values"
+	},
+	"fields":
+	{
+        "theme": ["Theme", "CatMultiple"],
+        "language": ["Language", "CatMultiple"],
+        "license": ["License", "CatSingle"],
+        "dataset_type": ["Dataset Type", "CatSingle"],
+        "format": ["Format", "CatSingle"],
+        "provider_name": ["Provider Name", "CatSingle"],
+        "spatial": ["Spatial", "Spatial"],
+        "temporal_extent": ["Temporal Extent", "DateRange"],
+        "num_rows": ["Number of Rows", "Numeric"]      
+	}
+}
