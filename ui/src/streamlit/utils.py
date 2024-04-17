@@ -127,7 +127,7 @@ def modify_df(results):
     #             "num_rows", "days_active", "velocity"])
     keys = st.session_state.fields.keys() | set(["temporal_start", "temporal_end"])
     
-    original_cols = ['id', 'isopen', 'metadata_modified', 'notes', 'title', 'score', 'partial_scores']
+    original_cols = ['id', 'isopen', 'private', 'metadata_modified', 'notes', 'title', 'score', 'partial_scores']
     keys = keys - set(original_cols)
     
     # print(keys)

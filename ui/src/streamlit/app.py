@@ -18,7 +18,7 @@ from utils import init_config, init_vars, init_style, modify_df, fetch_profile_j
 from comparison import compare_df
 
 # -------------- SETTINGS --------------
-page_title = "Dataset Search"
+page_title = "Dataset Selection"
 title_icon = ":mag:"
 dirname = os.path.dirname(__file__)
 stelar_icon = os.path.join(dirname, 'icons/stelar_icon.jpg')
@@ -28,7 +28,14 @@ layout = "wide"
 im = Image.open(page_icon)
 
 st.set_page_config(page_title=page_title, page_icon=im, layout=layout)
-st.title(page_title)
+#st.title(page_title)
+
+col1, col2 = st.columns([2,18])
+with col1: # logo
+    st.image('icons/Logo-Stelar-1-f.png', width=130)
+with col2: # title
+    st.title(page_title)
+
 st.subheader('Keyword Search')
 
 init_vars()

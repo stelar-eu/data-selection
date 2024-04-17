@@ -29,10 +29,10 @@ def result_btn(df):
                     st.session_state.compared_ids.remove(row['id'])
                     
 def add_content(row, comp):
-    if row['isopen']:
-        title = row['title'] + ' :unlock:'
-    else:
+    if row['private']:
         title = row['title'] + ' :lock:'  
+    else:
+        title = row['title'] + ' :unlock:'
     exp = comp.expander(title)
     exp.divider()
     exp.write(row['notes'])
@@ -50,7 +50,7 @@ def add_content(row, comp):
     c2.write('Date Modified: {}'.format(row['metadata_modified']))        
                     
 def sort_results(df, comp):
-    sort_options = ['Score Descending', 'Score Ascending'
+    sort_options = ['Score Descending', 'Score Ascending',
                     'Title Descending', 'Title Ascending',
                     'Date Descending', 'Date Ascending',
                     ]

@@ -48,7 +48,7 @@ def search_bar():
         keywords = st_tags(
             label='',
             text='Press enter to add more',
-            value = ['LAI'],
+            # value = ['LAI'],
             # value=['POI', 'Geospatial'],
             # suggestions=['POI', 'Geospatial(10)', 'Geospatial(200)', 'Landsat', 'Lakes&ext_bbox=20,35,30,42'],
             suggestions=suggestions,
