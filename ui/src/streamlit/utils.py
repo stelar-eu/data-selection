@@ -126,6 +126,10 @@ def modify_df(results):
     #             "provider_name", "spatial", "temporal_start", "temporal_end",
     #             "num_rows", "days_active", "velocity"])
     keys = st.session_state.fields.keys() | set(["temporal_start", "temporal_end"])
+    
+    original_cols = ['id', 'isopen', 'metadata_modified', 'notes', 'title', 'score', 'partial_scores']
+    keys = keys - set(original_cols)
+    
     # print(keys)
 
     # print(results_df['profile'])
@@ -153,8 +157,6 @@ def modify_df(results):
     #     if key not in profile.columns:
     #         profile[key] = None
     # print(profile)
-
-    original_cols = ['id', 'isopen', 'metadata_modified', 'notes', 'title', 'score', 'partial_scores']
 
     results_df2 = results_df[original_cols].copy()
     results_df2 = pd.concat([results_df2, fields], axis=1)

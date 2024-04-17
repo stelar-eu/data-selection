@@ -214,7 +214,8 @@ def facet_list():
             facet_tabs[no].plotly_chart(fig)
             min_k, max_k = min(c.keys()), max(c.keys())
             
-            last_val = [date(last_val[0], dformat), date(last_val[1], dformat)] if last_val is not None else []
+            last_val = [last_val] if type(last_val)==str else last_val
+            last_val = [date(v, dformat) for v in last_val] if last_val is not None else []
             facets_widgets[facet_col] = facet_tabs[no].date_input(facet_label, last_val)
             
         elif facet_type == 'Numeric':
