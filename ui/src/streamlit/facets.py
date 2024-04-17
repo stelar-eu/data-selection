@@ -205,7 +205,7 @@ def facet_list():
                 else:
                     vals = st.session_state.results_df[facet_col].dropna().values
             else:
-                vals = np.array([date(res['temporal_start'].split('T')[0], dformat) for res in facet_response])
+                vals = np.array([date(res['value'].split('T')[0], dformat) for res in facet_response])
             c = Counter(vals)
             if len(c) == 0:
                 continue
@@ -255,8 +255,11 @@ def facet_list():
             val = facet_tabs[no].text_area("Choose a single value or range:",
                                            value=last_val, 
                                            placeholder=f'{min_k} - {max_k}')
-            pattern_single_number = r'^(\d+)$'
-            pattern_number_dash_number = r'^(\d+)\s*-\s*(\d+)$'
+            #pattern_single_number = r'^(\d+)$'
+            #pattern_number_dash_number = r'^(\d+)\s*-\s*(\d+)$'
+            pattern_single_number = r'^(\d+(\.\d+)?)$'
+            pattern_number_dash_number = r'^(\d+(\.\d+)?)\s*-\s*(\d+(\.\d+)?)$'
+
             
             # Compile the regular expressions
             regex_single_number = re.compile(pattern_single_number)
@@ -303,7 +306,7 @@ def facet_list():
             	gdf_countries.sort_index(inplace=True)  # Sorted lexicographically
             
             # facets_widgets[facet_col] = get_drawn_shape(m, pd.DataFrame(), facet_tabs[no])
-            facets_widgets[facet_col] = get_drawn_shape(m, gdf_countries, facet_tabs[no])
+            facets_widgets[facet_col] = get_drawn_shape(m, gdf_countries, last_val, facet_tabs[no])
 
     # Button to update
     # return update_button(facets_widgets, exp, facets)

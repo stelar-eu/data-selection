@@ -220,7 +220,7 @@ def reset_session_state():
 
 
 	
-def get_drawn_shape(m, gdf_regions, comp=st):
+def get_drawn_shape(m, gdf_regions, last_val=None, comp=st):
 
 #		gdf_regions (GeoDataFrame): Names and polygon geometries of regions to populate a dropdown list.
 
@@ -382,6 +382,8 @@ drawnItems.addLayer(layer);
 	
 		# Placeholder for text area input for WKT
 		plc1 = st.empty()
+		if (wkt is None or wkt == "") and last_val is not None:
+		   wkt = last_val
 		wkt_input = plc1.text_area('WKT', value=wkt, disabled=False, label_visibility='visible') #, key='wkt_area')
 #		st.session_state['wkt_area'] = wkt
 		
