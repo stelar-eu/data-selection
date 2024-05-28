@@ -22,6 +22,7 @@ def _numOfDays(date1, date2):
 
 
 def compare_df(df):
+#    print(df.head(5))
     individual_tab, collective_tab = st.tabs(['Individual', 'Collective'])
 
     histogram_values = ['daterange']
@@ -36,7 +37,7 @@ def compare_df(df):
         wordcloud_values_dict[value] = list()
 
     comparison_df = pd.DataFrame(index=['Title', 'Organization Name', 'id', 'Start Date', 'End Date',
-                                        'Date Range', 'Themes', 'Languages', 'Licence', 'Number of rows',
+                                        'Date Range', 'Themes', 'Languages', 'License', 'Number of rows',
                                         'Keywords', 'Open?', 'Profile'])
     with individual_tab:
         df_container = st.container()
@@ -76,18 +77,20 @@ def compare_df(df):
             if 'spatial' in list_to_dict:
                 gjson = json.loads(list_to_dict['spatial'])
                 geom = shape(gjson)
-                geo_series = GeoSeries(geom)
-                centroid = geo_series.centroid
-                lon = centroid.x
-                lat = centroid.y
-                m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', min_zoom=1, max_bounds=True, zoom_start=5)
-                geo_json = folium.GeoJson(data=geom, style_function=lambda x: {"fillColor": "orange"})
-                geo_json.add_to(m)
-                # m.fit_bounds(geo_json.get_bounds())
+                if geom.is_empty:
+                    geometry = 'None'
+                else:
+                    geo_series = GeoSeries(geom)
+                    centroid = geo_series.centroid
+                    lon = centroid.x
+                    lat = centroid.y
+                    m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', min_zoom=1, max_bounds=True, zoom_start=5)
+                    geo_json = folium.GeoJson(data=geom, style_function=lambda x: {"fillColor": "orange"})
+                    geo_json.add_to(m)
+                    # m.fit_bounds(geo_json.get_bounds())
 
-                st.session_state.maps[df.index[pos - 1]] = m
-                polygon_dict[df.index[pos - 1]] = geom
-
+                    st.session_state.maps[df.index[pos - 1]] = m
+                    polygon_dict[df.index[pos - 1]] = geom
             else:
                 geometry = 'None'
             with cols[pos - 1]:
@@ -149,7 +152,7 @@ def compare_df(df):
             dataset_column.append(license)
 
             # Number of rows
-            if 'num_rows ' in list_to_dict:
+            if 'num_rows' in list_to_dict:
                 num_rows = list_to_dict['num_rows']
             else:
                 num_rows = None

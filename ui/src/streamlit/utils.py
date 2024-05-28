@@ -65,6 +65,8 @@ def init_vars():
         st.session_state.rankable = set([k for (k, [n, v]) in st.session_state.config['fields'].items() if
                                          v in ['CatMultiple', 'Spatial', 'DateSingle', 'DateRange', 'Numeric']])
         st.session_state.ranks = {k: True for k in st.session_state.rankable}
+        # Default ranking method
+        st.session_state.rank_algorithm = st.session_state.config['ranking']['default']
 
 
 def init_style():
@@ -122,25 +124,28 @@ def modify_df(results):
     if results_df.empty:
         return results_df
 
+#    print(results_df.head(5).T)
+
     # keys = set(["theme", "language", "license", "dataset_type", "format",
     #             "provider_name", "spatial", "temporal_start", "temporal_end",
     #             "num_rows", "days_active", "velocity"])
-    keys = st.session_state.fields.keys() | set(["temporal_start", "temporal_end"])
+    keys = st.session_state.fields.keys() | set(["temporal_start", "temporal_end", "license_title", "owner_org"])
+    # print("keys: ", keys)
     
     original_cols = ['id', 'isopen', 'private', 'metadata_modified', 'notes', 'title', 'score', 'partial_scores']
     keys = keys - set(original_cols)
     
-    # print(keys)
+    # print("keys: ", keys)
 
     # print(results_df['profile'])
     # Add Fields from Extras
     fields = results_df['extras'] + results_df['profile']
-    # print(fields)
+    # print("fields: ", fields)
     fields = fields.apply(lambda x: {xx['key']: xx['value'] for xx in x
                                      if xx['key'] in keys}).values
-    # print(fields)
+    # print("fields: ", fields)
     fields = pd.DataFrame(list(fields))
-    # print(fields.columns)
+    # print("fields: ", fields.columns)
     # extras = pd.DataFrame(list(results_df['extras'].apply(lambda x: {xx['key']: xx['value'] for xx in x
     # if xx['key'] in keys}).values))
     for key in keys:  # add missing columns with None values to work with facets
@@ -205,11 +210,16 @@ def all_in_map(title: str, shapes: dict, titles: dict, colors: dict):
     # gdf = gpd.GeoDataFrame(data, crs="EPSG:4326")
 
     gdf = gpd.GeoDataFrame({}, geometry=list(shapes.values()).copy(), crs="EPSG:4326")
-    centroid = gdf.dissolve().centroid
-    # minx, miny, maxx, maxy = gdf.total_bounds
+	# Remove empty geometries
+    # gdf = gdf[~gdf.is_empty]
+	# Reproject to World Mercator (3395) before calculating the centroid
+    # centroid = gdf.to_crs(epsg=3395).dissolve().centroid
+    # lon = centroid.x
+    # lat = centroid.y 
+    minx, miny, maxx, maxy = gdf.total_bounds
     # bb = box(minx, miny, maxx, maxy)
-    lon = centroid.x
-    lat = centroid.y
+    lon = 0.5 * (minx + maxx)
+    lat = 0.5 * (miny + maxy)
     m_all = folium.Map(location=[lat, lon], tiles='OpenStreetMap', max_bounds=True, min_zoom=1, zoom_start=5)
 
     for index, polygon in shapes.items():

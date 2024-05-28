@@ -113,10 +113,17 @@ def rank_select(comp):
 def rank_select_2(df):
     exp = st.expander('Ranking')
     # print(st.session_state.ranks)
+	
+	# Allow user to choose the rank aggregation method
+    rank_options = st.session_state.config['ranking']['methods'] #['Bordafuse','Bordacount','MRA','CombMIN','CombMED','CombANZ','CombMAX','CombSUM','CombMNZ','ISR','Log_ISR','Condorcet',]
+    rank_option = exp.selectbox(' ', rank_options, index=0, label_visibility='hidden')
+    print(rank_option)
+	
     cols = exp.columns(len(st.session_state.ranks)+1)
     # print(st.session_state.results_df.iloc[0]['partial_scores'])
     #rank_fields = st.session_state.results_df.iloc[0]['partial_scores'].keys()
     rank_fields = st.session_state.last_rank_preferences
+    # print(st.session_state.last_rank_preferences)
     
     # print(rank_fields)
     for no, (field_name, field_val) in enumerate(st.session_state.ranks.items()):
@@ -127,6 +134,7 @@ def rank_select_2(df):
     button = cols[len(cols)-1].button('Rerank')
     if button:
         # print('Clicked!')
+        st.session_state.rank_algorithm = rank_option
         #ranks = set([k for k,v in st.session_state.ranks.items() if v])
         ranks = st.session_state.last_rank_preferences
         # print(ranks)
@@ -146,7 +154,7 @@ def rank_select_2(df):
             res = split_partial_results_to_lists(partial_results)
             rank_settings = { 
                     "k": df.shape[0],  # number of results
-                    "algorithm":"Bordafuse"  #options: "CombMIN","CombMED","CombANZ","CombMAX","CombSUM","CombMNZ","Log_ISR","Bordafuse","Condorcet","ISR","Bordacount","MRA"
+                    "algorithm": rank_option #"Bordafuse"  #options: "CombMIN","CombMED","CombANZ","CombMAX","CombSUM","CombMNZ","Log_ISR","Bordafuse","Condorcet","ISR","Bordacount","MRA"
                     }
             # print(res)
             final_results = combined_ranking(res, rank_settings)

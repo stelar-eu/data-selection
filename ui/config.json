@@ -1,9 +1,9 @@
 {
 	"connect":
 	{
-		"KLMS_API": "XXXXXXXXX",
-		"CKAN_URL": "XXXXXXXXX",
-		"API_KEY": "XXXXXXXXXXXXXXXXXX"
+		"KLMS_API": "http://data-api.magellan2.imsi.athenarc.gr/api/v1/",
+		"CKAN_URL": "http://ckan.magellan2.imsi.athenarc.gr/",
+		"API_KEY": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJRMF9FRVRIMkVwajlZZG9FQms5dGQ1WVhkc2k5UEJQeklDdFNlSGRDbnowIiwiaWF0IjoxNzA3OTAxODAwfQ.e6savvT6O30T3ixklwBUerxnSGxvCDJm1Gn0lmvWZnw"
 	},
 	"commands":
 	{
@@ -21,11 +21,14 @@
         "theme": ["Theme", "CatMultiple"],
         "language": ["Language", "CatMultiple"],
         "license": ["License", "CatSingle"],
+        "organization": ["Organization", "CatSingle"],
         "dataset_type": ["Dataset Type", "CatSingle"],
         "format": ["Format", "CatSingle"],
         "provider_name": ["Provider Name", "CatSingle"],
         "spatial": ["Spatial", "Spatial"],
         "temporal_extent": ["Temporal Extent", "DateRange"],
-        "num_rows": ["Number of Rows", "Numeric"]      
+        "num_rows": ["Number of Rows", "Numeric"],
+        "days_active": ["Active Days", "Numeric"],
+        "velocity": ["Velocity", "Numeric"]
 	}
 }
