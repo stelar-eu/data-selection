@@ -13,7 +13,7 @@ from datetime import datetime
 from wordcloud import WordCloud
 from collections import Counter
 from shapely.geometry import box
-
+from results import rank_results
 
 def init_config(json_file):
     try:
@@ -124,30 +124,16 @@ def modify_df(results):
     if results_df.empty:
         return results_df
 
-#    print(results_df.head(5).T)
-
-    # keys = set(["theme", "language", "license", "dataset_type", "format",
-    #             "provider_name", "spatial", "temporal_start", "temporal_end",
-    #             "num_rows", "days_active", "velocity"])
     keys = st.session_state.fields.keys() | set(["temporal_start", "temporal_end", "license_title", "owner_org"])
-    # print("keys: ", keys)
     
     original_cols = ['id', 'isopen', 'private', 'metadata_modified', 'notes', 'title', 'score', 'partial_scores']
     keys = keys - set(original_cols)
     
-    # print("keys: ", keys)
-
-    # print(results_df['profile'])
     # Add Fields from Extras
     fields = results_df['extras'] + results_df['profile']
-    # print("fields: ", fields)
     fields = fields.apply(lambda x: {xx['key']: xx['value'] for xx in x
                                      if xx['key'] in keys}).values
-    # print("fields: ", fields)
     fields = pd.DataFrame(list(fields))
-    # print("fields: ", fields.columns)
-    # extras = pd.DataFrame(list(results_df['extras'].apply(lambda x: {xx['key']: xx['value'] for xx in x
-    # if xx['key'] in keys}).values))
     for key in keys:  # add missing columns with None values to work with facets
         if key not in fields.columns:
             fields[key] = None
@@ -155,33 +141,25 @@ def modify_df(results):
     for field in ["language", "theme"]:
         fields[field] = fields[field].apply(lambda x: json.loads(x) if not pd.isna(x) else [])
 
-    # # Add Fields from Profile
-    # profile = pd.DataFrame(list(results_df['profile'].apply(lambda x: {xx['key']: xx['value'] for xx in x
-    #                                                                  if xx['key'] in keys}).values))
-    # for key in keys: # add missing columns with None values to work with facets
-    #     if key not in profile.columns:
-    #         profile[key] = None
-    # print(profile)
 
     results_df2 = results_df[original_cols].copy()
     results_df2 = pd.concat([results_df2, fields], axis=1)
-    # print(results_df.shape, results_df2.shape)
     CKAN_URL = st.session_state.config['connect']['CKAN_URL']
     results_df2['link'] = results_df.name.apply(lambda x: CKAN_URL + 'dataset/' + x)
     results_df2['organization'] = results_df.organization.apply(lambda x: x['title'])
     results_df2['profile_json_url'] = results_df.resources.apply(lambda x: fetch_profile_json_url(x))
     results_df2['profile_json_id'] = results_df.resources.apply(lambda x: fetch_profile_json_id(x))
-    # print(results_df2['profile_json_id'])
-    # print(results_df2['organization'])
-    # results_df2['tags'] = results_df.tags.apply(lambda x: [xx['display_name'] for xx in x])
     results_df2['metadata_modified'] = pd.to_datetime(results_df2['metadata_modified'])
 
-    # results_df2['score'] = np.random.randint(1, 100, results_df2.shape[0])/100
     results_df2 = results_df2.set_index('id', drop=False)
+    
+    results_df2 = rank_results(results_df2, 'Bordafuse', st.session_state.last_rank_preferences)
 
-    # print(results_df2)
-    # print(results_df2.columns)
-    # print(results_df2.head(5).T)
+    if 'indices' in st.session_state:
+        inds = st.session_state.indices
+    else:
+        inds = results_df2.index
+    results_df2 = results_df2.loc[inds]
 
     return results_df2
 
