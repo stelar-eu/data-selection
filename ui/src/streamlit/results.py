@@ -12,8 +12,28 @@ def update_cmp(key):
     else:
         st.session_state.compared_ids.remove(key)
 
+
+def sort_df(df, key):
+    sort_option = st.session_state[key]
+    fields = {'title': 'title', 'date': 'metadata_modified', 'score': 'score'}
+    
+    field, asc = sort_option.lower().split(' ')
+    asc = asc == 'ascending'
+    field = fields[field]
+    
+    # df = st.session_state.results_df
+    if df.empty:
+        return
+    # st.session_state.results_df = df.sort_values(field, ascending=asc)    
+    df = df.sort_values(field, ascending=asc)    
+    return df
+
 def result_btn():
     df = st.session_state.results_df
+    if df is None:
+        return
+    df = sort_df(df, 'sort_option')
+    
     for index, row in df.iterrows():
         st2 = st.container(height=None, border=2)
         with st2:
@@ -53,28 +73,19 @@ def add_content(row, comp):
     c1, c2 = exp.columns(2)
     c1.write('Provider: {}'.format(row['provider_name']))
     c2.write('Date Modified: {}'.format(row['metadata_modified']))        
-                    
+      
 def sort_results(comp):
     sort_options = ['Score Descending', 'Score Ascending',
                     'Title Descending', 'Title Ascending',
                     'Date Descending', 'Date Ascending',
                     ]
-    sort_option = comp.selectbox(' ', sort_options, index=0, label_visibility='hidden')
-    
-    fields = {'title': 'title', 'date': 'metadata_modified', 'score': 'score'}
-    
-    field, asc = sort_option.lower().split(' ')
-    asc = asc == 'ascending'
-    field = fields[field]
-    
-    df = st.session_state.results_df
-    if df.empty:
-        return
-    st.session_state.results_df = df.sort_values(field, ascending=asc)         
-    
+    comp.selectbox(' ', sort_options, index=0, label_visibility='hidden', 
+                   key='sort_option',)
+                   # on_change=sort_df, key='sort_option',
+                   # args=('sort_option', ))
 
         
-def rank_results(df, algorithm, rank_active_fields, threshold=None):
+def rank_results(df, algorithm, rank_active_fields, weights):
     # ranks = st.session_state.last_rank_preferences
     ranks = rank_active_fields
     if df is  None:
@@ -89,7 +100,7 @@ def rank_results(df, algorithm, rank_active_fields, threshold=None):
                                 'partial_scores': {k: v for k,v in row['partial_scores'].items() if k in ranks}})
     # print(ranks)
     res = split_partial_results_to_lists(partial_results)
-    #TODO: add threshold for THRESHOLD-alg, etc, add args in header with default valuese
+    #TODO: utilize weights
     rank_settings = { 
             "k": df.shape[0],  # number of results
             "algorithm": algorithm 
@@ -107,14 +118,12 @@ def rank_select():
 	
 	# Allow user to choose the rank aggregation method
     rank_options = st.session_state.config['ranking']['methods'] #['Bordafuse','Bordacount','MRA','CombMIN','CombMED','CombANZ','CombMAX','CombSUM','CombMNZ','ISR','Log_ISR','Condorcet',]
-    rank_option = exp.selectbox(' ', rank_options, index=0, label_visibility='hidden')
+    rank_option = exp.selectbox(' ', rank_options, index=0, label_visibility='hidden', on_change=None)
     # print(rank_option)
-    if rank_option == 'Bordacount': #TODO: Change to threshold
-        threshold = exp.number_input('Threshold', min_value=0.0, max_value=1.0, 
-                                    value=0.5, step=None,)
 	
     cols = exp.columns(len(st.session_state.ranks)+1)
     rank_fields = st.session_state.last_rank_preferences
+    weights = {}
     
     for no, (field_name, field_val) in enumerate(st.session_state.ranks.items()):
         disabled = field_name not in rank_fields
@@ -122,8 +131,16 @@ def rank_select():
         field_label = st.session_state.fields[field_name][0]
         st.session_state.ranks[field_name] = cols[no].checkbox(field_label, value=value,
                                                                disabled=disabled)
+        
+        if rank_option in ['Bordacount'] and not disabled:  #TODO: Change to threshold
+            weights[field_name] = cols[no].number_input('Weight', min_value=0.0, max_value=1.0, 
+                                                        value=0.5, step=None, key=field_name+'_weight')
+    print("Weights: ", weights)
     button = cols[-1].button('Rerank')
     if button:
+        print('Rerank button clicked!')
         rank_active_fields = set([k for k, v in st.session_state.ranks.items() if v])
         st.session_state.rank_algorithm = rank_option
-        st.session_state.results_df = rank_results(st.session_state.results_df, rank_option, rank_active_fields)
+        st.session_state.results_df = rank_results(st.session_state.results_df, rank_option, 
+                                                   rank_active_fields, weights)
+        # sort_df('sort_option')

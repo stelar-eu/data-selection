@@ -72,8 +72,6 @@ if st.session_state.results_df is not None:
                 
                 rank_select()
                 sort_results(columns[3])
-                
-                # st.session_state.results_df = results_df
                 result_btn()
                 
     

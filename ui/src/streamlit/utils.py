@@ -126,7 +126,7 @@ def modify_df(results):
 
     keys = st.session_state.fields.keys() | set(["temporal_start", "temporal_end", "license_title", "owner_org"])
     
-    original_cols = ['id', 'isopen', 'private', 'metadata_modified', 'notes', 'title', 'score', 'partial_scores']
+    original_cols = ['id', 'isopen', 'private', 'metadata_modified', 'notes', 'title', 'tags', 'score', 'partial_scores']
     keys = keys - set(original_cols)
     
     # Add Fields from Extras
