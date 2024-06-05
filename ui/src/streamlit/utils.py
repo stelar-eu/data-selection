@@ -118,6 +118,13 @@ def fetch_profile_json_id(resources):
             break
     return profile_json_id
 
+def fetch_profile_json(resources):
+    profile_json = []
+    for res in resources:
+        if 'resource_type' in res and res['resource_type'] != 'other':
+            profile_json.append({'id': res['id'], 'name': res['name'],
+                                 'format': res['format'], 'url': res['url']})
+    return profile_json
 
 def modify_df(results):
     results_df = pd.DataFrame(results)
@@ -147,13 +154,15 @@ def modify_df(results):
     CKAN_URL = st.session_state.config['connect']['CKAN_URL']
     results_df2['link'] = results_df.name.apply(lambda x: CKAN_URL + 'dataset/' + x)
     results_df2['organization'] = results_df.organization.apply(lambda x: x['title'])
-    results_df2['profile_json_url'] = results_df.resources.apply(lambda x: fetch_profile_json_url(x))
-    results_df2['profile_json_id'] = results_df.resources.apply(lambda x: fetch_profile_json_id(x))
+    results_df2['organization_dict'] = results_df.organization
+    # results_df2['profile_json_url'] = results_df.resources.apply(lambda x: fetch_profile_json_url(x))
+    # results_df2['profile_json_id'] = results_df.resources.apply(lambda x: fetch_profile_json_id(x))
+    results_df2['profile_dict'] = results_df.resources.apply(lambda x: fetch_profile_json(x))
     results_df2['metadata_modified'] = pd.to_datetime(results_df2['metadata_modified'])
 
     results_df2 = results_df2.set_index('id', drop=False)
     
-    results_df2 = rank_results(results_df2, 'Bordafuse', st.session_state.last_rank_preferences)
+    results_df2 = rank_results(results_df2, 'Bordafuse', st.session_state.last_rank_preferences, weights={})
 
     if 'indices' in st.session_state:
         inds = st.session_state.indices

@@ -85,7 +85,7 @@ def sort_results(comp):
                    # args=('sort_option', ))
 
         
-def rank_results(df, algorithm, rank_active_fields, weights):
+def rank_results(df, algorithm, rank_active_fields, weights={}):
     # ranks = st.session_state.last_rank_preferences
     ranks = rank_active_fields
     if df is  None:
