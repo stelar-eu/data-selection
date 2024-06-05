@@ -197,9 +197,9 @@ def all_in_map(title: str, shapes: dict, titles: dict, colors: dict):
     # gdf = gpd.GeoDataFrame(data, crs="EPSG:4326")
 
     gdf = gpd.GeoDataFrame({}, geometry=list(shapes.values()).copy(), crs="EPSG:4326")
-	# Remove empty geometries
+    # Remove empty geometries
     # gdf = gdf[~gdf.is_empty]
-	# Reproject to World Mercator (3395) before calculating the centroid
+    # Reproject to World Mercator (3395) before calculating the centroid
     # centroid = gdf.to_crs(epsg=3395).dissolve().centroid
     # lon = centroid.x
     # lat = centroid.y 
@@ -234,9 +234,11 @@ def generate_wordcloud(title: str, wordcloud_list: list):
 def generate_hist(title: str, x_list: list, x_title: str, y_list: list, y_title: str, colors: dict):
     st.subheader(title)
     df = pd.DataFrame({x_title: x_list, y_title: y_list}, columns=[x_title, y_title])
-    df['color'] = df[x_title].map(colors)
-    fig = px.bar(df, x=x_title, y=y_title, color='color',
-                 color_discrete_sequence=px.colors.qualitative.Alphabet)
-    fig.update_layout(xaxis_type='category', showlegend=False)
 
+    fig = px.bar(df, x=x_title, y=y_title, color=x_title, color_discrete_map=colors)
+    fig.update_traces(base=dict(width=4))
+    fig.for_each_trace(lambda t: t.update(hovertemplate=t.hovertemplate.replace('variable', 'Dataset')))
+    fig.update_layout(legend_title_text='Dataset')
+    fig.update_layout(legend=dict(orientation="v", yanchor="bottom", y=-1, xanchor="left", x=0))
+    fig.update_xaxes(showticklabels=False, title='')
     st.plotly_chart(fig, use_container_width=True)

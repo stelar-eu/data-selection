@@ -2,6 +2,7 @@
 # Mostly Panos
 import streamlit as st
 import pandas as pd
+import numpy as np
 import ast
 import json
 import folium
@@ -12,6 +13,8 @@ import sys
 import dateutil.parser as parser
 from utils import dates_line_plot, all_in_map, generate_wordcloud, generate_hist
 from geopandas import GeoSeries
+import ast
+
 
 def _numOfDays(date1, date2):
     # check which date is greater to avoid days output in -ve number
@@ -22,225 +25,363 @@ def _numOfDays(date1, date2):
 
 
 def compare_df(df):
-#    print(df.head(5))
     individual_tab, collective_tab = st.tabs(['Individual', 'Collective'])
 
-    histogram_values = ['daterange']
-    wordcloud_values = ['keywords']
+    # columns
+    fields = st.session_state.fields
+    field_cols = fields.keys()
 
-    histogram_values_dict = dict()
-    for value in histogram_values:
-        histogram_values_dict[value] = list()
+    original_cols = ['title', 'id', 'organization', 'isopen', 'private', 'tags',
+                     'metadata_modified', 'temporal_start', 'temporal_end', 'license_title']
 
-    wordcloud_values_dict = dict()
-    for value in wordcloud_values:
-        wordcloud_values_dict[value] = list()
+    original_cols.extend(field_cols)
 
-    comparison_df = pd.DataFrame(index=['Title', 'Organization Name', 'id', 'Start Date', 'End Date',
-                                        'Date Range', 'Themes', 'Languages', 'License', 'Number of rows',
-                                        'Keywords', 'Open?', 'Profile'])
-    with individual_tab:
-        df_container = st.container()
-        st.divider()
-    CKAN_URL = st.session_state.config['connect']['CKAN_URL']
+    cols = list(dict.fromkeys(original_cols))
+    cols.append('profile')
+    # Titles of columns
+    titles_list = []
+    field_types_dict = dict()
+    field_names_dict = dict()
+
+    titles_list.extend(['Title', 'Id', 'Organization', 'Open', 'Private', 'Keywords',
+                        'Metadata Modified', 'Temporal Start', 'Temporal End', 'License Title'])
+
+    for key in field_cols:
+        titles_list.append(fields[key][0])
+        field_names_dict[key] = fields[key][0]
+        field_types_dict[key] = fields[key][1]
+
+    titles_list = list(dict.fromkeys(titles_list))
+    titles_list.append('Profile')
+    # Minus temporal_start and temporal_end
+    n_rows = len(titles_list) - 2
     pos = 1
-
-    n_rows = 2
-    n_cols = len(df)
+    n_columns, _ = df.shape
     with individual_tab:
-        rows = [st.container() for _ in range(n_rows)]
-        cols_per_row = [r.columns(n_cols) for r in rows]
-        cols = [column for row in cols_per_row for column in row]
+        rows = [st.container(border=True) for _ in range(n_rows)]
+        cols_per_row = [r.columns(n_columns + 1) for r in rows]
+        columns = [column for row in cols_per_row for column in row]
 
-    all_dates_df = None
+    cols_dict = dict()
+
+    one_down = 0
+    for title in titles_list:
+        if title not in ['Temporal Start', 'Temporal End']:
+            with columns[pos - 1 + one_down]:
+                st.write(title)
+            one_down += n_columns + 1
+
+    CKAN_URL = st.session_state.config['connect']['CKAN_URL']
+
+    # initialize dictionaries for collective_tab
+
+    # Dataset titles used in plots
     datasets = list()
     titles = dict()
-    buttons = dict()
-    polygon_dict = dict()
+
+    # Spacial
+    spatial_dict = dict()
+
+    # DateRange
+    all_dates_dict_of_dfs = dict()
+
+    # Numeric
+    histogram_dict = dict()
+
+    # CatMultiple + check len of set greater than 1
+    wordcloud_dict = dict()
 
     for ind in df.index:
-        dataset_column = []
-        title_link = f'<a target="_blank" href="{CKAN_URL}dataset/{df["name"][ind]}">{df["title"][ind]}</a>'
+        jump = 0
+        temporal_start = ''
+        temporal_end = ''
+        temporal_extend = []
+        temporal_extend_days = None
+        for col in cols:
+            if col == 'title':
+                datasets.append(df["title"][ind])
+                titles[ind] = df["title"][ind]
+                with columns[pos]:
+                    title_link = f'<a target="_blank" href="{df["link"][ind]}">{df["title"][ind]}</a>'
+                    st.write(title_link, unsafe_allow_html=True)
+            elif col == 'id':
+                with columns[pos + jump]:
+                    st.write(ind)
+            elif col == 'organization':
+                with columns[pos + jump]:
+                    organization_dict = df['organization_dict'][ind]
+                    if organization_dict is not None:
+                        organization_title = organization_dict['title']
+                        organization_name = organization_dict['name']
 
-        dataset_column.append(title_link)
-        dataset_column.append(df['organization'][ind]['name'])
-        dataset_column.append(df.index[pos - 1])
+                        link = CKAN_URL + 'organization/' + organization_name
+                        organization_link = f'<a target="_blank" href="{link}">{organization_title}</a>'
+                        st.write(organization_link, unsafe_allow_html=True)
+                    else:
+                        st.write(f":red[{None}]")
+            elif col == 'isopen':
+                with columns[pos + jump]:
+                    if not df['isopen'][ind]:
+                        st.write(f":red[{df['isopen'][ind]}]")
+                    else:
+                        st.write(f":green[{df['isopen'][ind]}]")
+            elif col == 'private':
+                with columns[pos + jump]:
+                    if not df['private'][ind]:
+                        st.write(f":red[{df['private'][ind]}]")
+                    else:
+                        st.write(f":green[{df['private'][ind]}]")
+            elif col == 'tags':
+                with columns[pos + jump]:
+                    tags_display_names = []
+                    for value in df['tags'][ind]:
+                        tags_display_names.append(value['display_name'].lower())
 
-        titles[ind] = df["title"][ind]
+                    # add it in catmultiple dict
+                    if 'Keywords' not in wordcloud_dict:
+                        wordcloud_dict['Keywords'] = list()
 
-        if 'extras' in df:
-            list_to_dict = {value['key']: value['value']
-                            for value in df['extras'][ind]}
+                    wordcloud_dict['Keywords'].extend(tags_display_names)
+                    s = ''
+                    for i in tags_display_names:
+                        s += "- " + i + "\n"
 
-            # spatial
-            geometry = 'yes'
-            if 'spatial' in list_to_dict:
-                gjson = json.loads(list_to_dict['spatial'])
-                geom = shape(gjson)
-                if geom.is_empty:
-                    geometry = 'None'
+                    if s == '':
+                        st.write(f":red[{None}]")
+                    else:
+                        st.write(s)
+            elif col == 'metadata_modified':
+                with columns[pos + jump]:
+                    if df['metadata_modified'][ind] is None:
+                        st.write(f":red[{None}]")
+                    else:
+                        st.write(f":green[{df['metadata_modified'][ind]}]")
+            elif col == 'temporal_start':
+                if df['temporal_start'][ind] not in [' ', 'None', None, 'nan'] and not pd.isna(
+                        df['temporal_start'][ind]):
+                    temporal_start = parser.parse(df['temporal_start'][ind]).date()
                 else:
-                    geo_series = GeoSeries(geom)
-                    centroid = geo_series.centroid
-                    lon = centroid.x
-                    lat = centroid.y
-                    m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', min_zoom=1, max_bounds=True, zoom_start=5)
-                    geo_json = folium.GeoJson(data=geom, style_function=lambda x: {"fillColor": "orange"})
-                    geo_json.add_to(m)
-                    m.fit_bounds(geo_json.get_bounds())
+                    temporal_start = datetime.strptime('1975-03-15', '%Y-%m-%d').date()
 
-                    st.session_state.maps[df.index[pos - 1]] = m
-                    polygon_dict[df.index[pos - 1]] = geom
+                # Do not write temporal_start
+                # with columns[pos + jump]:
+                #     if temporal_start is None:
+                #         st.write(f":red[{None}]")
+                #     else:
+                #         st.write(f":green[{temporal_start}]")
+
+                # we jump backwards as we do not write temporal_start
+                jump -= (n_columns + 1)
+
+            elif col == 'temporal_end':
+                if df['temporal_end'][ind] not in [' ', 'None', None, 'nan'] and not pd.isna(
+                        df['temporal_end'][ind]):
+                    temporal_end = parser.parse(df['temporal_end'][ind]).date()
+                else:
+                    temporal_end = datetime.today().date()
+
+                # Do not write temporal_end
+                # with columns[pos + jump]:
+                #     if temporal_end is None:
+                #         st.write(f":red[{None}]")
+                #     else:
+                #         st.write(f":green[{temporal_end}]")
+
+                # we jump backwards as we do not write temporal_end
+                jump -= (n_columns + 1)
+
+            elif col == 'license_title':
+                with columns[pos + jump]:
+                    if df['license_title'][ind] is None:
+                        st.write(f":red[{None}]")
+                    else:
+                        st.write(df['license_title'][ind])
+            elif col == 'profile':
+                possible_profiles = df['profile_dict'][ind]
+                if len(possible_profiles) == 0:
+                    with columns[pos + jump]:
+                        st.write(f":red[No Profile]")
+                else:
+                    count_profiles = 0
+                    for profile in possible_profiles:
+                        if profile['format'] == 'JSON' and profile['url'].endswith('.json') and 'profile' in profile['name'].lower():
+                            count_profiles += 1
+                            # Create the button with the link
+                            details = st.session_state.config
+
+                            connect = details['connect']
+                            KLMS_API = connect['KLMS_API']
+                            API_KEY = connect['API_KEY']
+                            resource_id = profile['id']
+                            with columns[pos + jump]:
+                                st.link_button(profile['name'],
+                                               f"/profiler_app?package_id={ind}&resource_id={resource_id}"
+                                               f"&title={df['title'][ind]}&KLMS_API={KLMS_API}&API_KEY={API_KEY}",
+                                               use_container_width=True)
+                        elif profile['format'] == 'HTML':
+                            count_profiles += 1
+                            url = profile['url']
+                            name = profile['name']
+                            resource_id = profile['id']
+                            link = f'''<a target="_blank" href="{url}"><button id={resource_id}">{name}</button></a>'''
+                            with columns[pos + jump]:
+                                st.link_button(name, url, use_container_width=True)
+
+                    if count_profiles == 0:
+                        with columns[pos + jump]:
+                            st.write(f":red[No Profile]")
             else:
-                geometry = 'None'
-            with cols[pos - 1]:
-                st.write(df["title"][ind])
-            if geometry != 'None':
-                with cols[pos - 1 + n_cols]:
-                    st_folium(st.session_state.maps[df.index[pos - 1]],
-                              key=str(datetime.now()),
-                              use_container_width=True, returned_objects=[])
-            else:
-                with cols[pos - 1 + n_cols]:
-                    st.write('\n\n\nNo Spatial Element')
+                # TODO: add DateRange type
+                if col == 'temporal_extent':
+                    temporal_extend.append(str(temporal_start))
+                    temporal_extend.append(str(temporal_end))
+                    temporal_extend_days = _numOfDays(temporal_start, temporal_end)
+                    name = field_names_dict[col] + str(' (Number of Days)')
+                    # Don't plot Temporal Extent
+                    #
+                    # if name not in histogram_dict:
+                    #     histogram_dict[name] = list()
+                    # histogram_dict[name].append(temporal_extend_days)
+                    # for timeline plot
+                    dates_df = pd.DataFrame([[temporal_start, pos], [temporal_end, pos]],
+                                            columns=['Date', df["title"][ind]])
 
-            # Dates
+                    if name not in all_dates_dict_of_dfs:
+                        all_dates_dict_of_dfs[name] = dates_df
+                    else:
+                        all_dates_dict_of_dfs[name] = pd.merge(all_dates_dict_of_dfs[name],
+                                                               dates_df, on='Date', how='outer')
 
-            if 'temporal_start' in list_to_dict:
-                temporal_start = parser.parse(list_to_dict['temporal_start']).date()
-            else:
-                temporal_start = datetime.strptime('1970-01-01', '%Y-%m-%d').date()
+                    with columns[pos + jump]:
+                        s = temporal_extend[0] + ' - ' + temporal_extend[1]
+                        st.write(s)
+                else:
+                    chosen_col_name = field_names_dict[col]
+                    chosen_col_type = field_types_dict[col]
 
-            if 'temporal_end' in list_to_dict:
-                temporal_end = parser.parse(list_to_dict['temporal_end']).date()
-            else:
-                temporal_end = datetime.today().date()
+                    if chosen_col_type == 'CatSingle':
+                        with columns[pos + jump]:
+                            if pd.isna(df[col][ind]):
+                                st.write(f":red[{None}]")
+                            else:
+                                st.write(df[col][ind])
+                    elif chosen_col_type == 'CatMultiple':
+                        display_names = []
+                        for value in df[col][ind]:
+                            display_names.append(value.lower())
 
-            dataset_column.append(temporal_start)
-            dataset_column.append(temporal_end)
-            daterange = _numOfDays(temporal_start, temporal_end)
-            histogram_values_dict['daterange'].append(daterange)
-            datasets.append(titles[ind])
-            dataset_column.append(str(daterange) + " days")
+                        if field_names_dict[col] not in wordcloud_dict:
+                            wordcloud_dict[field_names_dict[col]] = list()
 
-            dates_df = pd.DataFrame([[temporal_start, pos], [temporal_end, pos]], columns=['Date', df["title"][ind]])
+                        wordcloud_dict[field_names_dict[col]].extend(display_names)
+                        # add it in catmultiple dict
+                        with columns[pos + jump]:
+                            s = ''
+                            for i in display_names:
+                                s += "- " + i + "\n"
+                            if s == '':
+                                st.write(f":red[{None}]")
+                            else:
+                                st.write(s)
 
-            if all_dates_df is None:
-                all_dates_df = dates_df
-            else:
-                all_dates_df = pd.merge(all_dates_df, dates_df, on='Date', how='outer')
+                    elif chosen_col_type == 'Numeric':
+                        if field_names_dict[col] not in histogram_dict:
+                            histogram_dict[field_names_dict[col]] = list()
+                        with columns[pos + jump]:
+                            if pd.isna(df[col][ind]):
+                                st.write(f":red[{None}]")
+                                histogram_dict[field_names_dict[col]].append(np.nan)
+                            else:
+                                st.write(df[col][ind])
+                                histogram_dict[field_names_dict[col]].append(ast.literal_eval((df[col][ind])))
 
-            # theme
-            if 'theme' in list_to_dict:
-                dataset_themes = ast.literal_eval(list_to_dict['theme'])
-            else:
-                dataset_themes = ['None']
-            dataset_column.append(dataset_themes)
+                            # add to histogram
+                    elif chosen_col_type == 'Spatial':
+                        if not pd.isna(df[col][ind]):
+                            gjson = json.loads(df[col][ind])
+                            geom = shape(gjson)
+                            if geom.is_empty:
+                                geometry = 'None'
+                                with columns[pos + jump]:
+                                    st.write(f":red[{None}]")
+                            else:
+                                geo_series = GeoSeries(geom)
+                                centroid = geo_series.centroid
+                                lon = centroid.x
+                                lat = centroid.y
+                                m = folium.Map(location=[lat, lon], tiles='OpenStreetMap', height=300, min_zoom=1,
+                                               max_bounds=True,
+                                               zoom_start=5)
+                                geo_json = folium.GeoJson(data=geom, style_function=lambda x: {"fillColor": "orange"})
+                                geo_json.add_to(m)
+                                m.fit_bounds(geo_json.get_bounds())
 
-            # language
-            if 'language' in list_to_dict:
-                dataset_languages = ast.literal_eval(list_to_dict['language'])
-            else:
-                dataset_languages = ['None']
-            dataset_column.append(dataset_languages)
+                                if field_names_dict[col] not in spatial_dict:
+                                    spatial_dict[field_names_dict[col]] = dict()
 
-            # license
-            if 'license' in list_to_dict:
-                license = list_to_dict['license']
-            else:
-                license = 'None'
-            dataset_column.append(license)
+                                spatial_dict[field_names_dict[col]][ind] = geom
+                                with columns[pos + jump]:
+                                    st_folium(m, key=str(datetime.now()),
+                                              use_container_width=True,
+                                              returned_objects=[])
+                                # add to spatial_dict
+                        else:
+                            geometry = 'None'
+                            with columns[pos + jump]:
+                                st.write(f":red[{None}]")
 
-            # Number of rows
-            if 'num_rows' in list_to_dict:
-                num_rows = list_to_dict['num_rows']
-            else:
-                num_rows = None
-
-            dataset_column.append(num_rows)
-        else:
-            for i in range(7):
-                dataset_column.append(None)
-
-        # Keywords
-        if 'tags' in df and df['tags'] is not None:
-            tags_display_names = []
-            for value in df['tags'][ind]:
-                tags_display_names.append(value['display_name'].lower())
-
-            dataset_column.append(tags_display_names)
-            wordcloud_values_dict['keywords'].extend(tags_display_names)
-
-        else:
-            dataset_column.append(None)
-
-        # is_open?
-        if 'isopen' in df:
-            is_open = df['isopen'][ind]
-
-        else:
-            is_open = None
-
-        dataset_column.append(is_open)
-
-        # profile
-        if 'profile_json_id' in df and df['profile_json_id'][ind] is not None and df['profile_json_url'][ind].endswith(
-                '.json'):
-            # Create the button with the link
-            details = st.session_state.config
-
-            connect = details['connect']
-            KLMS_API = connect['KLMS_API']
-            API_KEY = connect['API_KEY']
-            resource_id = df['profile_json_id'][ind]
-            button = f"""<a href='/profiler_app?package_id={ind}&resource_id={str(df['profile_json_id'][ind])}&title={titles[ind]}&KLMS_API={KLMS_API}&API_KEY={API_KEY}' target="_blank"><button id={ind}">View</button></a>"""
-            dataset_column.append(button)
-        else:
-            dataset_column.append('No profile')
-
+            jump += n_columns + 1
         pos += 1
 
-        comparison_df[pos] = dataset_column
+    with collective_tab:
+        # TODO: check format and then add for
+        cols_col = st.columns(2)
+        with cols_col[0]:
+            if all_dates_dict_of_dfs:
+                value = list(all_dates_dict_of_dfs.keys())[0]
+                colors = dates_line_plot('Dataset TimeSpan', all_dates_dict_of_dfs[value])
 
-    with df_container:
-        st.markdown(comparison_df.to_html(escape=False, header=False), unsafe_allow_html=True)
-
-    if 'extras' in df:
-        with collective_tab:
-            if polygon_dict:
-                cols_col = st.columns(2)
-                with cols_col[0]:
-                    colors = dates_line_plot('Dataset TimeSpan', all_dates_df)
+        if spatial_dict:
+            value = list(spatial_dict.keys())[0]
+            if spatial_dict[value]:
                 with cols_col[1]:
-                    all_in_map('Spatial Coverage', polygon_dict, titles, colors)
-            st.divider()
+                    all_in_map('Spatial Coverage', spatial_dict[value], titles, colors)
+        st.divider()
 
-            # histogram(s)
-            if len(histogram_values_dict) == 1:
-                value = list(histogram_values_dict.keys())[0]
-                generate_hist(value, datasets, 'datasets', histogram_values_dict[value], value, colors)
-            elif len(histogram_values_dict) > 1:
-                histogram_cols = st.columns(2)
-                i = 0
-                for value in histogram_values_dict:
+        # histogram(s)
+        if len(histogram_dict) == 1:
+            value = list(histogram_dict.keys())[0]
+            if np.count_nonzero(~np.isnan(histogram_dict[value])) > 1:
+                generate_hist(value, datasets, 'Dataset', histogram_dict[value], value, colors)
+                st.divider()
+        elif len(histogram_dict) > 1:
+            histogram_cols = st.columns(2)
+            divider = 0
+            i = 0
+            for value in histogram_dict:
+                if np.count_nonzero(~np.isnan(histogram_dict[value])) > 1:
                     with histogram_cols[i]:
-                        generate_hist(value, datasets, 'datasets', histogram_values_dict[value], value, colors)
+                        generate_hist(value, datasets, 'Dataset', histogram_dict[value], value, colors)
                     if i == 0:
                         i = 1
                     else:
                         i = 0
-            st.divider()
+                    if divider == 0:
+                        divider = 1
+                        st.divider()
 
-            # wordcloud(s)
-            if len(wordcloud_values_dict) == 1:
-                value = list(wordcloud_values_dict.keys())[0]
-                generate_wordcloud(value, wordcloud_values_dict[value])
-            elif len(wordcloud_values_dict) > 1:
-                wordcloud_cols = st.columns(2)
-                i = 0
-                for value in wordcloud_values_dict:
+        # wordcloud(s)
+        if len(wordcloud_dict) == 1:
+            value = list(wordcloud_dict.keys())[0]
+            if len(set(wordcloud_dict[value])) > 1:
+                generate_wordcloud(value, wordcloud_dict[value])
+        elif len(wordcloud_dict) > 1:
+            wordcloud_cols = st.columns(2)
+            i = 0
+            for value in wordcloud_dict:
+                if len(set(wordcloud_dict[value])) > 1:
                     with wordcloud_cols[i]:
-                        generate_wordcloud(value, wordcloud_values_dict[value])
+                        generate_wordcloud(value, wordcloud_dict[value])
                     if i == 0:
                         i = 1
                     else:
