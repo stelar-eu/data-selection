@@ -40,17 +40,18 @@ def result_btn():
             # col0, col1, col2, col3 = st2.columns([0.05, 0.85, 0.05, 0.05])
             # col0.checkbox('', value=False, key='cmp_'+row['id'], on_change=update_cmp, args=('cmp_'+row['id'], row['id'], ))
 
-            col1, col2, col3 = st2.columns([0.90, 0.05, 0.05])
+            col1, col2, col3, col4 = st2.columns([0.85, 0.05, 0.05, 0.05])
 
             add_content(row, col1)
             
-            col2.link_button(':globe_with_meridians:', row['link'], use_container_width=True, help='Visit Catalog')
+            col2.write('{:.2f}'.format(row['score']))
+            col3.link_button(':globe_with_meridians:', row['link'], use_container_width=True, help='Visit Catalog')
             
             if row['id'] not in st.session_state.compared_ids:
-                cmp_btn = col3.button(':heavy_plus_sign:', use_container_width=True, key=row['id'], help='Add',
+                cmp_btn = col4.button(':heavy_plus_sign:', use_container_width=True, key=row['id'], help='Add',
                                       on_click=update_cmp, args=(row['id'], ))
             else:
-                cmp_btn = col3.button(':x:', use_container_width=True, key=row['id'], help='Remove',
+                cmp_btn = col4.button(':x:', use_container_width=True, key=row['id'], help='Remove',
                                       on_click=update_cmp, args=(row['id'], ))
                     
 def add_content(row, comp):

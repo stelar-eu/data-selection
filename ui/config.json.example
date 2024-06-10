@@ -13,7 +13,7 @@
 	},
 	"ranking":
 	{
-        "methods": ["Bordafuse","Bordacount","MRA","CombMIN","CombMED","CombANZ","CombMAX","CombSUM","CombMNZ","ISR","Log_ISR","Condorcet"],
+        "methods": ["Bordafuse","Bordacount","MRA","CombMIN","CombMED","CombANZ","CombMAX","CombSUM","CombMNZ","ISR","Log_ISR","Condorcet","Threshold"],
 		"default": "Bordafuse"
 	},
 	"fields":
