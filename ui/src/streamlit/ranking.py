@@ -444,20 +444,20 @@ def combined_ranking(rankings, settings):
     else:   # construct a merged DataFrame from input lists
         df_rankings = merge_input_lists(rankings)   
 
-    if settings['algorithm'] == 'threshold':
+    if settings['algorithm'].lower() == 'threshold':
         # INPUT: collection of ranked lists
         if 'weights' in settings:
             weights = settings['weights']
         else:  # If weights are not user-specified, assume equal weight (1.0) for each input list
             weights = [1.0] * len(rankings)
         result, cnt, threshold = topk_threshold(rankings, weights, settings['k'])
-    elif settings['algorithm'] == 'ice':
+    elif settings['algorithm'].lower() == 'ice':
         # INPUT: data frame
         result = ICEscore(df_rankings)
-    elif settings['algorithm'] == 'paretoset':
+    elif settings['algorithm'].lower() == 'paretoset':
         # INPUT: data frame
         result = Skyline(df_rankings, settings['sense'])
-    elif settings['algorithm'] == 'weighted_paretoset':
+    elif settings['algorithm'].lower() == 'weighted_paretoset':
         # INPUT: data frame
         result = weightedScoreSkyline(df_rankings, settings['sense'], settings['weights'], settings['k'])
     elif settings['algorithm'].lower() in ['combmin','combmax','combmed','combsum','combanz','combmnz']:  # methods from ranx

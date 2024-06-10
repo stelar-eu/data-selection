@@ -117,7 +117,7 @@ def rank_select():
     exp = st.expander('Ranking')
 	
 	# Allow user to choose the rank aggregation method
-    rank_options = st.session_state.config['ranking']['methods'] #['Bordafuse','Bordacount','MRA','CombMIN','CombMED','CombANZ','CombMAX','CombSUM','CombMNZ','ISR','Log_ISR','Condorcet',]
+    rank_options = st.session_state.config['ranking']['methods'] #['Bordafuse','Bordacount','MRA','CombMIN','CombMED','CombANZ','CombMAX','CombSUM','CombMNZ','ISR','Log_ISR','Condorcet','Threshold',]
     rank_option = exp.selectbox(' ', rank_options, index=0, label_visibility='hidden', on_change=None)
     # print(rank_option)
 	
@@ -132,7 +132,7 @@ def rank_select():
         st.session_state.ranks[field_name] = cols[no].checkbox(field_label, value=value,
                                                                disabled=disabled)
         
-        if rank_option in ['Bordacount'] and not disabled:  #TODO: Change to threshold
+        if rank_option in ['Threshold'] and not disabled:
             weights[field_name] = cols[no].number_input('Weight', min_value=0.0, max_value=1.0, 
                                                         value=0.5, step=None, key=field_name+'_weight')
     print("Weights: ", weights)
