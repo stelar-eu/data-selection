@@ -23,9 +23,11 @@ And visit `localhost:8501`
 
 ## Docker Execution
 Build the docker image by:
-```docker build -t data_selection:v1 .
+```sh
+docker build -t data_selection:v1 .
 ```
 
 Create the container by:
-```docker run --name data_selection -p 8501:8501 data_selection:v1
+```sh
+docker run --name data_selection -p 8501:8501 data_selection:v1
 ```
