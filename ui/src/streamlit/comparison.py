@@ -31,7 +31,9 @@ def compare_df(df):
     fields = st.session_state.fields
     field_cols = fields.keys()
 
-    original_cols = ['title', 'id', 'organization', 'isopen', 'private', 'tags',
+    original_cols = ['title', 'id', 'organization', 
+                     # 'isopen', 
+                     'private', 'tags',
                      'metadata_modified', 'temporal_start', 'temporal_end', 'license_title']
 
     original_cols.extend(field_cols)
@@ -43,7 +45,9 @@ def compare_df(df):
     field_types_dict = dict()
     field_names_dict = dict()
 
-    titles_list.extend(['Title', 'Id', 'Organization', 'Open', 'Private', 'Keywords',
+    titles_list.extend(['Title', 'Id', 'Organization',
+                        # 'Open', 
+                        'Private', 'Keywords',
                         'Metadata Modified', 'Temporal Start', 'Temporal End', 'License Title'])
 
     for key in field_cols:
@@ -71,7 +75,8 @@ def compare_df(df):
                 st.write(title)
             one_down += n_columns + 1
 
-    CKAN_URL = st.session_state.config['connect']['CKAN_URL']
+    # CKAN_URL = st.session_state.config['connect']['CKAN_URL']
+    KLMS_URL = st.session_state.config['connect']['KLMS_URL']
 
     # initialize dictionaries for collective_tab
 
@@ -109,16 +114,18 @@ def compare_df(df):
                     st.write(ind)
             elif col == 'organization':
                 with columns[pos + jump]:
-                    organization_dict = df['organization_dict'][ind]
-                    if organization_dict is not None:
-                        organization_title = organization_dict['title']
-                        organization_name = organization_dict['name']
+                    # organization_dict = df['organization_dict'][ind]
+                    # if organization_dict is not None:
+                    #     organization_title = organization_dict['title']
+                    #     organization_name = organization_dict['name']
 
-                        link = CKAN_URL + 'organization/' + organization_name
-                        organization_link = f'<a target="_blank" href="{link}">{organization_title}</a>'
-                        st.write(organization_link, unsafe_allow_html=True)
-                    else:
-                        st.write(f":red[{None}]")
+                    #     link = KLMS_URL + 'organization/' + organization_name
+                    #     organization_link = f'<a target="_blank" href="{link}">{organization_title}</a>'
+                    #     st.write(organization_link, unsafe_allow_html=True)
+                    # else:
+                    #     st.write(f":red[{None}]")
+                    organization = df['organization'][ind]
+                    st.write(organization)
             elif col == 'isopen':
                 with columns[pos + jump]:
                     if not df['isopen'][ind]:
@@ -135,7 +142,8 @@ def compare_df(df):
                 with columns[pos + jump]:
                     tags_display_names = []
                     for value in df['tags'][ind]:
-                        tags_display_names.append(value['display_name'].lower())
+                        # tags_display_names.append(value['display_name'].lower())
+                        tags_display_names.append(value.lower())
 
                     # add it in catmultiple dict
                     if 'Keywords' not in wordcloud_dict:
@@ -267,7 +275,8 @@ def compare_df(df):
                                 st.write(df[col][ind])
                     elif chosen_col_type == 'CatMultiple':
                         display_names = []
-                        for value in df[col][ind]:
+                        vals = ast.literal_eval(df[col][ind])
+                        for value in vals:
                             display_names.append(value.lower())
 
                         if field_names_dict[col] not in wordcloud_dict:
@@ -298,7 +307,8 @@ def compare_df(df):
                             # add to histogram
                     elif chosen_col_type == 'Spatial':
                         if not pd.isna(df[col][ind]):
-                            gjson = json.loads(df[col][ind])
+                            # gjson = json.loads(df[col][ind])
+                            gjson = df[col][ind]
                             geom = shape(gjson)
                             if geom.is_empty:
                                 geometry = 'None'

@@ -103,7 +103,8 @@ def geom_to_shape(g):
     """    
     try:  # First, consider it as a GeoJSON
         if isinstance(g, dict):
-            geom = json.dumps(g)   # JSON dictionary
+            # geom = json.dumps(g)   # JSON dictionary
+            geom = g
         else:
             geom = json.loads(g)  # string containing a JSON
     except:

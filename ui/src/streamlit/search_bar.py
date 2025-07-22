@@ -10,6 +10,7 @@ import json
 from collections import Counter
 from datetime import date
 from utils import modify_df
+import ast
 
 def update_results_df():
     json_response = st.session_state.cat_response.json()
@@ -18,24 +19,30 @@ def update_results_df():
 
 def load_suggestions():
     details = st.session_state.config
-    connect = details['connect']
+    # connect = details['connect']
     # URL to KLMS API
-    KLMS_API = connect['KLMS_API']
+    # KLMS_API = connect['KLMS_API']
 
     # Provide the API key required for requests regarding packages
-    headers = {'Content-Type': 'application/json', 'Api-Token': connect['API_KEY']}
+    # headers = {'Content-Type': 'application/json', 'Api-Token': connect['API_KEY']}
     
     cfile = '../../cache/tags.json'
     if os.path.exists(cfile):
         facet_response = json.load(open(cfile))
     else:
         os.makedirs(os.path.dirname(cfile), exist_ok=True)
-        facet_response = requests.post(KLMS_API+details['commands']['values'],
-                                   json= {"q": 'tags'}, headers=headers).json()  
+        # facet_response = requests.post(KLMS_API+details['commands']['values'],
+                                   # json= {"q": 'tags'}, headers=headers).json()  
+        facet_response = st.session_state.client.POST(details['commands']['values'],
+                                     q='tags').json()
+        # facet_response = facet_response['result']
+        # facet_response = [ast.literal_eval(res) for res in  
+        #                   facet_response['result']]
         with open(cfile, 'w') as o:
             o.write(json.dumps(facet_response, indent=4))
     c = Counter()
     for res in facet_response:
+        # res = ast.literal_eval(res)
         c.update(res['arr_values'])
     suggestions = [sug[0] for sug in c.most_common(1000)]
     return suggestions
@@ -166,9 +173,9 @@ def search_bar():
         print(search_criteria)
 
         details = st.session_state.config
-        connect = details['connect']
-        KLMS_API = connect['KLMS_API']
-        API_KEY = connect['API_KEY']
+        # connect = details['connect']
+        # KLMS_API = connect['KLMS_API']
+        # API_KEY = connect['API_KEY']
     
         # Make a POST request to the KLMS API with the parameters
         commands = details['commands']
@@ -181,14 +188,18 @@ def search_bar():
             total[k] = v            
         st.session_state.last_query = total
         
+        # headers = {'Content-Type': 'application/json', 'Api-Token': API_KEY}
         
-
-        headers = {'Content-Type': 'application/json', 'Api-Token': API_KEY}
-        
-        st.session_state.cat_response = requests.post(KLMS_API + commands['rank'], 
-                                                      json=search_criteria, headers=headers)
+        # st.session_state.cat_response = requests.post(KLMS_API + commands['rank'], 
+                                                      # json=search_criteria, headers=headers)
+        st.session_state.cat_response = st.session_state.client.POST(commands['rank'],
+                                                                     keywords=search_criteria['keywords'],
+                                                                     filter_preferences=search_criteria['filter_preferences'],
+                                                                     rank_preferences=search_criteria['rank_preferences'],
+                                                                     )
         
         json_response = st.session_state.cat_response.json()
+        # print(json_response)
         st.session_state.compared_ids = set()
         st.session_state.results_df = modify_df(json_response['result']['results'])  
     return button

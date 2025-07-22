@@ -16,6 +16,7 @@ from map import map_geometries, get_drawn_shape, geom_to_shape
 from streamlit_folium import st_folium
 import re
 import geopandas as gpd
+import ast
 
 def date(x, dformat):
     return datetime.strptime(x, dformat)
@@ -50,22 +51,18 @@ def facet_list():
     # KLMS API connection details
     details = st.session_state.config
 
-    connect = details['connect']
+    # connect = details['connect']
     # URL to KLMS API
-    KLMS_API = connect['KLMS_API']
+    # KLMS_API = connect['KLMS_API']
 
     # Provide the API key required for requests regarding packages
-    headers = {'Content-Type': 'application/json', 'Api-Token': connect['API_KEY']}
+    # headers = {'Content-Type': 'application/json', 'Api-Token': connect['API_KEY']}
     
     facets_widgets = {}
     # results = json_response['result']['results']
     
-    # print("This ", st.session_state.results_df is None)
-    
     for no, (facet_col, (facet_label, facet_type)) in enumerate(facets.items()):
-        # print(no, (facet_col, (facet_label, facet_type)))
         last_val = st.session_state.last_query.get(facet_col)
-        # print(facet_col, last_val)
         
         if st.session_state.results_df is None:
             cfile = f'../../cache/{facet_col}.json'
@@ -73,8 +70,13 @@ def facet_list():
                 facet_response = json.load(open(cfile))
             else:
                 os.makedirs(os.path.dirname(cfile), exist_ok=True)
-                facet_response = requests.post(KLMS_API+details['commands']['values'],
-                                           json= {"q": facet_col}, headers=headers).json()    
+                # facet_response = requests.post(KLMS_API+details['commands']['values'],
+                #                            json= {"q": facet_col}, headers=headers).json()    
+                facet_response = st.session_state.client.POST(details['commands']['values'],
+                                             q=facet_col).json()
+                
+                # facet_response = [ast.literal_eval(res) for res in  
+                #                   facet_response['result']]
                 with open(cfile, 'w') as o:
                     o.write(json.dumps(facet_response, indent=4))
                 
@@ -181,7 +183,6 @@ def facet_list():
             
                 cfile = '../../cache/temporal_extent_plot.json'
                 if init_plot:
-                    # print(dates)
                     dates = {k.strftime("%d/%m/%Y"): v for k,v in dates.items()}
                     os.makedirs(os.path.dirname(cfile), exist_ok=True)
                     with open(cfile, 'w') as o:
@@ -219,16 +220,16 @@ def facet_list():
             facets_widgets[facet_col] = facet_tabs[no].date_input(facet_label, last_val)
             
         elif facet_type == 'Numeric':
-            # print(facet_col)
             if st.session_state.results_df is not None:
                 if st.session_state.results_df.empty:
                     vals = []
                 else:
                     vals = st.session_state.results_df[facet_col].dropna().values
             else:
-                vals = np.array([float(res['value']) for res in facet_response])
+                # vals = np.array([float(res['value']) for res in facet_response])
+                vals = np.array([float(ast.literal_eval(res['value'])) 
+                                 for res in facet_response])
             c = Counter(vals)
-            # print(c)
             if len(c) == 0:
                 continue
             fig = px.histogram(x=c.keys(), y=c.values())
@@ -284,7 +285,8 @@ def facet_list():
                     df['spatial'] = st.session_state.results_df[facet_col]
                     df['id'] = st.session_state.results_df['id']
                     df = df.dropna().reset_index(drop=True)
-                    df['geometry'] = df.apply(lambda row: geom_to_shape(row['spatial']), axis=1)
+                    df['geometry'] = df.spatial.apply(lambda x: geom_to_shape(x))
+                    # df['geometry'] = df.apply(lambda row: geom_to_shape(row['spatial']), axis=1)
             else:
                 df = pd.DataFrame(facet_response)
                 df['id'] = range(df.shape[0])

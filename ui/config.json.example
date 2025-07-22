@@ -1,31 +1,97 @@
 {
-	"connect":
-	{
-		"KLMS_API": "XXXXXXXXX",
-		"CKAN_URL": "XXXXXXXXX",
-		"API_KEY": "XXXXXXXXXXXXXXXXXX"
-	},
-	"commands":
-	{
-		"search": "dataset/search",
-		"rank": "catalog/rank",
-		"values": "catalog/facet/values"
-	},
-	"ranking":
-	{
-        "methods": ["Bordafuse","Bordacount","MRA","CombMIN","CombMED","CombANZ","CombMAX","CombSUM","CombMNZ","ISR","Log_ISR","Condorcet","Threshold"],
-		"default": "Bordafuse"
-	},
-	"fields":
-	{
-        "theme": ["Theme", "CatMultiple"],
-        "language": ["Language", "CatMultiple"],
-        "license": ["License", "CatSingle"],
-        "dataset_type": ["Dataset Type", "CatSingle"],
-        "format": ["Format", "CatSingle"],
-        "provider_name": ["Provider Name", "CatSingle"],
-        "spatial": ["Spatial", "Spatial"],
-        "temporal_extent": ["Temporal Extent", "DateRange"],
-        "num_rows": ["Number of Rows", "Numeric"]      
-	}
+   "connect":{
+      "KLMS_URL":"XXXXXXXXXXXXXXXXXXXXXXX",
+      "base_url":"XXXXXXXXXXXXXXXXXXXXXXX",
+      "username":"XXXXXXXXXXXXXXXXXXXXXXX",
+      "password":"XXXXXXXXXXXXXXXXXXXXXXX"
+   },
+   "commands":{
+      "rank":"v1/catalog/rank",
+      "values":"v1/facet/values"
+   },
+   "ranking":{
+      "methods":[
+         "Bordafuse",
+         "Bordacount",
+         "MRA",
+         "CombMIN",
+         "CombMED",
+         "CombANZ",
+         "CombMAX",
+         "CombSUM",
+         "CombMNZ",
+         "ICE",
+         "ISR",
+         "Log_ISR",
+         "Condorcet",
+         "Threshold"
+      ],
+      "default":"Bordafuse",
+      "info":{
+         "Bordafuse":"Bordafuse assigns each data source a score inversely proportional to its rank per facet (i.e., higher ranks receive higher scores). The overall score is the sum of these contributions across all facets, rewarding consensus.",
+         "Bordacount":"Bordacount ranks each data source per facet by awarding N points to the top candidate, N−1 to the second, and so on. The total points across all facets determine the final ranking.",
+         "MRA":"Median Rank Aggregation (MRA) assigns each data source the median of its available partial scores across the specified facets.",
+         "CombMIN":"CombMIN gives each data source the minimum score among its available partial scores across the specified facets.",
+         "CombMED":"CombMED computes the median of all available partial scores for each data source in the specified facets.",
+         "CombANZ":"CombANZ improves upon CombSUM by dividing the sum of a data source’s partial scores by the number of non-zero scores it has across the facets.",
+         "CombMAX":"CombMAX assigns each data source the maximum value among its available partial scores across the specified facets.",
+         "CombSUM":"CombSUM calculates the total score for each data source by summing all of its available partial scores across the specified facets.",
+         "CombMNZ":"CombMNZ extends CombSUM by multiplying each data source’s summed partial score by the count of non-zero scores it has across the facets.",
+         "ISR":"Inverse Square Rank (ISR) gives each data source a score inversely proportional to the square of its rank in each facet, aggregated based on frequency across facets.",
+         "Log_ISR":"LogISR adjusts ISR by applying a logarithmic scale to the frequency with which a data source appears in the facets, still using inverse square rank weighting for individual scores.",
+         "Condorcet":"Condorcet identifies the data source that wins or ties all pairwise comparisons against other sources across each facet, following a majoritarian voting approach.",
+         "Threshold":"The Threshold method selects the top-k data sources using a linear weighted combination of the partial ranked lists per facet.",
+         "ICE":"ICE Computes a score by multiplying three numerical values: Impact indicates how much the data source will provide noticeable change; Confidence on whether the source will actually have the predicted Impact; and Ease looks at the level of effort to integrate the data source."
+      }
+   },
+   "fields":{
+      "theme":[
+         "Theme",
+         "CatMultiple"
+      ],
+      "language":[
+         "Language",
+         "CatMultiple"
+      ],
+      "license":[
+         "License",
+         "CatSingle"
+      ],
+      "organization":[
+         "Organization",
+         "CatSingle"
+      ],
+      "dataset_type":[
+         "Dataset Type",
+         "CatSingle"
+      ],
+      "format":[
+         "Format",
+         "CatSingle"
+      ],
+      "provider_name":[
+         "Provider Name",
+         "CatSingle"
+      ],
+      "spatial":[
+         "Spatial",
+         "Spatial"
+      ],
+      "temporal_extent":[
+         "Temporal Extent",
+         "DateRange"
+      ],
+      "num_rows":[
+         "Number of Rows",
+         "Numeric"
+      ],
+      "days_active":[
+         "Active Days",
+         "Numeric"
+      ],
+      "velocity":[
+         "Velocity",
+         "Numeric"
+      ]
+   }
 }

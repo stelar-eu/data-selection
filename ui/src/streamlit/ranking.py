@@ -186,10 +186,10 @@ def ICEscore(df, impact = 'impact', confidence = 'confidence', ease = 'ease'):
     results = df.assign(ice='NAN')
     # Assign ICE score
     for i, row in results.iterrows():
-        results.at[i, 'ice'] = row[impact] * row[confidence] * row[ease]
+        results.at[i, 'score'] = row[impact] * row[confidence] * row[ease]
     
     # Sort by descending ICE score
-    results = results.sort_values(by=['ice'], ascending=False)
+    results = results.sort_values(by=['score'], ascending=False)
     
     return results
 
@@ -443,7 +443,7 @@ def combined_ranking(rankings, settings):
         df_rankings = rankings   
     else:   # construct a merged DataFrame from input lists
         df_rankings = merge_input_lists(rankings)   
-
+        
     if settings['algorithm'].lower() == 'threshold':
         # INPUT: collection of ranked lists
         if 'weights' in settings:
@@ -453,6 +453,10 @@ def combined_ranking(rankings, settings):
         result, cnt, threshold = topk_threshold(rankings, weights, settings['k'])
     elif settings['algorithm'].lower() == 'ice':
         # INPUT: data frame
+        if 'ice_scores' in settings:
+            df_rankings = pd.concat([df_rankings, settings['ice_scores']], axis=1)
+        else:
+            raise ValueError('No ICE scores are given.')
         result = ICEscore(df_rankings)
     elif settings['algorithm'].lower() == 'paretoset':
         # INPUT: data frame

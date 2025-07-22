@@ -5,6 +5,8 @@ import streamlit as st
 #from streamlit_modal import Modal
 import streamlit.components.v1 as components
 from ranking import split_partial_results_to_lists, combined_ranking
+import numpy as np
+import pandas as pd
 
 def update_cmp(key):
     if key not in st.session_state.compared_ids:
@@ -62,13 +64,17 @@ def add_content(row, comp):
     exp = comp.expander(title)
     exp.divider()
     exp.write(row['notes'])
-    exp.write('Score: {:.2f}'.format(row['score']))
-    
-    part_scores = row['partial_scores']
+    exp.write('**Score: {:.2f}**'.format(row['score']))
+
+    if st.session_state.rank_algorithm != 'ICE':    
+        part_scores = row['partial_scores']
+    else:
+        part_scores = st.session_state.ice_scores.loc[row['id']]
     part_cols = exp.columns(len(part_scores)+1)
-    part_cols[0].write('Partial Scores: ')
+    part_cols[0].write('**Partial Scores:** ')
+    
     for no, (col, val) in enumerate(part_scores.items()):
-        part_cols[no+1].write('{}: {:.2f}'.format(col, float(val)))
+        part_cols[no+1].write('*{}*: **{:.2f}**'.format(col, float(val)))
         
     exp.divider()
     c1, c2 = exp.columns(2)
@@ -85,8 +91,28 @@ def sort_results(comp):
                    # on_change=sort_df, key='sort_option',
                    # args=('sort_option', ))
 
+def generate_ice_scores(series):
+    # Set random seed for reproducibility if needed
+    np.random.seed(42)
+    
+    index = series.index
+    
+    # Generate random values between 1 and 10 for each component
+    impact = np.random.randint(1, 11, size=len(series))
+    confidence = np.random.randint(1, 11, size=len(series))
+    ease = np.random.randint(1, 11, size=len(series))
+
+
+    # Create DataFrame
+    df = pd.DataFrame({
+        'impact': impact,
+        'confidence': confidence,
+        'ease': ease,
+    }, index=index)
+
+    return df
         
-def rank_results(df, algorithm, rank_active_fields, weights={}):
+def rank_results(df, algorithm, rank_active_fields, weights={}, ice_scores=None):
     # ranks = st.session_state.last_rank_preferences
     ranks = rank_active_fields
     if df is  None:
@@ -99,13 +125,25 @@ def rank_results(df, algorithm, rank_active_fields, weights={}):
     for index, row in df.iterrows():
         partial_results.append({'id': row['id'], 
                                 'partial_scores': {k: v for k,v in row['partial_scores'].items() if k in ranks}})
-    # print(ranks)
+    
     res = split_partial_results_to_lists(partial_results)
-    #TODO: utilize weights
     rank_settings = { 
             "k": df.shape[0],  # number of results
-            "algorithm": algorithm 
+            "algorithm": algorithm,
             }
+   
+    if algorithm=='ice':
+        if ice_scores is None:
+            raise ValueError('ICE Scores cannot be none.')
+            
+        temp_ice_scores = ice_scores.loc[df.index]
+        rank_settings['ice_scores'] = temp_ice_scores
+
+    if algorithm=='threshold':
+        if len(weights) == 0:
+            raise ValueError('Weights cannot be empty.')
+        rank_settings['weights'] = weights
+        
     final_results = combined_ranking(res, rank_settings)
     final_results = final_results['score'].to_dict()
     
@@ -116,11 +154,17 @@ def rank_results(df, algorithm, rank_active_fields, weights={}):
 
 def rank_select():
     exp = st.expander('Ranking')
+    
+    
 	
 	# Allow user to choose the rank aggregation method
-    rank_options = st.session_state.config['ranking']['methods'] #['Bordafuse','Bordacount','MRA','CombMIN','CombMED','CombANZ','CombMAX','CombSUM','CombMNZ','ISR','Log_ISR','Condorcet','Threshold',]
-    rank_option = exp.selectbox(' ', rank_options, index=0, label_visibility='hidden', on_change=None)
-    # print(rank_option)
+    rank_options = st.session_state.config['ranking']['methods'] 
+    method_col1, method_col2 = exp.columns([9, 1])
+    rank_option = method_col1.selectbox(' ', rank_options, index=0, label_visibility='hidden', on_change=None)
+    method_col2.link_button(':information_source:', '', use_container_width=True,
+                            help=st.session_state.config['ranking']['info'][rank_option])
+    
+    # rank_option = exp.selectbox(' ', rank_options, index=0, label_visibility='hidden', on_change=None) # CHANGED IN V2
 	
     cols = exp.columns(len(st.session_state.ranks)+1)
     rank_fields = st.session_state.last_rank_preferences
@@ -136,12 +180,37 @@ def rank_select():
         if rank_option in ['Threshold'] and not disabled:
             weights[field_name] = cols[no].number_input('Weight', min_value=0.0, max_value=1.0, 
                                                         value=0.5, step=None, key=field_name+'_weight')
-    print("Weights: ", weights)
+            
+    ice_scores = None
+    if rank_option == 'ICE':
+        
+        ice_col1, ice_col2 = exp.columns([1, 9])
+        
+        if st.session_state.ice_scores is None:
+            ice_scores = pd.read_csv("../../cache/ice_scores.csv", index_col=0)
+        else:
+            ice_scores = st.session_state.ice_scores
+
+        csv = ice_scores.to_csv()
+        ice_col1.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name='ice_scores.csv',
+            mime='text/csv'
+        )
+        
+        uploaded_file = ice_col2.file_uploader("Upload a CSV file containing ICE scores", type="csv")
+        if uploaded_file is not None:
+            st.session_state.ice_scores = pd.read_csv(uploaded_file, index_col=0)
+            # ice_scores = generate_ice_scores(df)
+            
     button = cols[-1].button('Rerank')
     if button:
         print('Rerank button clicked!')
         rank_active_fields = set([k for k, v in st.session_state.ranks.items() if v])
         st.session_state.rank_algorithm = rank_option
-        st.session_state.results_df = rank_results(st.session_state.results_df, rank_option, 
-                                                   rank_active_fields, weights)
+        st.session_state.results_df = rank_results(st.session_state.results_df, 
+                                                   rank_option.lower(), 
+                                                   rank_active_fields, weights,
+                                                   st.session_state.ice_scores)
         # sort_df('sort_option')

@@ -14,6 +14,7 @@ from wordcloud import WordCloud
 from collections import Counter
 from shapely.geometry import box
 from results import rank_results
+from stelar.client import Client
 
 def init_config(json_file):
     try:
@@ -28,6 +29,14 @@ def init_config(json_file):
 def init_vars():
     if 'config' not in st.session_state:
         init_config('../../config.json')
+        
+    if 'client' not in st.session_state:    
+        st.session_state.client = Client(base_url=st.session_state.config['connect']['base_url'],
+                                         username=st.session_state.config['connect']['username'],
+                                         password=st.session_state.config['connect']['password'])
+
+    if 'ice_scores' not in st.session_state:
+        st.session_state.ice_scores = None
 
     if 'keywords' not in st.session_state:
         st.session_state.keywords = []
@@ -126,6 +135,20 @@ def fetch_profile_json(resources):
                                  'format': res['format'], 'url': res['url']})
     return profile_json
 
+
+def fetch_profile_json_v2(x):
+    profile_json = []
+    if 'res_name' not in x:
+        return profile_json
+    for no, res in enumerate(x['res_name']):
+        if x['res_type'][no] != 'other':
+            profile_json.append({
+                                # 'id': x['id'][no],
+                                'name': x['res_name'][no],
+                                'format': x['res_format'][no], 
+                                'url': x['res_url'][no]})
+    return profile_json
+
 def modify_df(results):
     results_df = pd.DataFrame(results)
     if results_df.empty:
@@ -133,31 +156,50 @@ def modify_df(results):
 
     keys = st.session_state.fields.keys() | set(["temporal_start", "temporal_end", "license_title", "owner_org"])
     
-    original_cols = ['id', 'isopen', 'private', 'metadata_modified', 'notes', 'title', 'tags', 'score', 'partial_scores']
+    # original_cols = ['id', 'isopen', 'private', 'metadata_modified', 'notes', 'title', 'tags', 'score', 'partial_scores']
+    original_cols = ['id', 'private', 'metadata_modified', 'notes', 'title', 'tags', 'score', 'partial_scores', 'spatial'] #TODO: REmove
     keys = keys - set(original_cols)
     
     # Add Fields from Extras
-    fields = results_df['extras'] + results_df['profile']
-    fields = fields.apply(lambda x: {xx['key']: xx['value'] for xx in x
-                                     if xx['key'] in keys}).values
+    # fields = results_df['extras'] + results_df['profile'] # CHANGED IN V2
+    # fields = results_df['profile']
+    # fields = fields.apply(lambda x: {xx['key']: xx['value'] for xx in x
+    #                                  if xx['key'] in keys}).values # CHANGED IN V2
+    fields = results_df['extras']
+                            
     fields = pd.DataFrame(list(fields))
     for key in keys:  # add missing columns with None values to work with facets
         if key not in fields.columns:
-            fields[key] = None
+                fields[key] = None
+    
+    # fields = pd.DataFrame(list(fields))
+    # for key in keys:  # add missing columns with None values to work with facets
+    #     # CHANGED IN V2
+    #     if key not in fields.columns: #not profile
+    #         if key in results_df:
+    #             fields[key] = results_df[key]
+    #         else:
+    #             fields[key] = None
 
-    for field in ["language", "theme"]:
-        fields[field] = fields[field].apply(lambda x: json.loads(x) if not pd.isna(x) else [])
+    # for field in ["language", "theme"]: # CHANGED IN V2
+    #     fields[field] = fields[field].apply(lambda x: json.loads(x) if not pd.isna(x) else []) # CHANGED IN V2
 
 
     results_df2 = results_df[original_cols].copy()
     results_df2 = pd.concat([results_df2, fields], axis=1)
-    CKAN_URL = st.session_state.config['connect']['CKAN_URL']
-    results_df2['link'] = results_df.name.apply(lambda x: CKAN_URL + 'dataset/' + x)
-    results_df2['organization'] = results_df.organization.apply(lambda x: x['title'])
-    results_df2['organization_dict'] = results_df.organization
+    # CKAN_URL = st.session_state.config['connect']['CKAN_URL']
+    KLMS_URL = st.session_state.config['connect']['KLMS_URL']
+    results_df2['link'] = results_df.name.apply(lambda x: KLMS_URL + x) 
+    
+    # results_df2['link'] = results_df.name.apply(lambda x: CKAN_URL + 'dataset/' + x) # CHANGED IN V2
+    # results_df2['organization'] = results_df.organization.apply(lambda x: x['title']) # CHANGED IN V2
+    # results_df2['organization_dict'] = results_df.organization # CHANGED IN V2
     # results_df2['profile_json_url'] = results_df.resources.apply(lambda x: fetch_profile_json_url(x))
     # results_df2['profile_json_id'] = results_df.resources.apply(lambda x: fetch_profile_json_id(x))
-    results_df2['profile_dict'] = results_df.resources.apply(lambda x: fetch_profile_json(x))
+    
+    results_df2['profile_dict'] = results_df.resources.apply(lambda x: fetch_profile_json(x)) # CHANGED IN V2
+    # results_df2['profile_dict'] = results_df.apply(lambda x: fetch_profile_json_v2(x), axis=1) 
+    
     results_df2['metadata_modified'] = pd.to_datetime(results_df2['metadata_modified'])
 
     results_df2 = results_df2.set_index('id', drop=False)
