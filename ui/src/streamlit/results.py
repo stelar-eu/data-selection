@@ -32,7 +32,7 @@ def sort_df(df, key):
 
 def result_btn():
     df = st.session_state.results_df
-    if df is None:
+    if df is None or df.empty:
         return
     df = sort_df(df, 'sort_option')
     

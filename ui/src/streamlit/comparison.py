@@ -275,7 +275,10 @@ def compare_df(df):
                                 st.write(df[col][ind])
                     elif chosen_col_type == 'CatMultiple':
                         display_names = []
-                        vals = ast.literal_eval(df[col][ind])
+                        if pd.isna(df[col][ind]):
+                            vals = []
+                        else:
+                            vals = ast.literal_eval(df[col][ind])
                         for value in vals:
                             display_names.append(value.lower())
 
